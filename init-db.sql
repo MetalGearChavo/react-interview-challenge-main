@@ -5,7 +5,9 @@ CREATE TABLE accounts (
     name VARCHAR NOT NULL,
     amount INTEGER NOT NULL,
     type VARCHAR NOT NULL,
-    credit_limit INTEGER
+    credit_limit INTEGER,
+    withdrawn_today INTEGER DEFAULT 0,
+    withdrawn_day DATE DEFAULT CURRENT_DATE
 );
 
 ALTER TABLE accounts ADD CONSTRAINT verify_type
