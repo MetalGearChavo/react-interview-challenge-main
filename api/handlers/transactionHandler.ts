@@ -16,7 +16,31 @@ export const withdrawal = async (accountID: string, amount: number) => {
   const account = await getAccount(accountID);
   const today = new Date();
 
-  // Resetear contador si es un día distinto
+  if (amount <= 0) {
+    return account;
+  }
+
+  if (amount > 200) {
+    return account;
+  }
+
+  if (amount % 5 !== 0) {
+    return account;
+  }
+
+  if (account.type === "credit") {
+    if (account.amount < 0) {
+      let proyectedAmount = account.credit_limit + account.amount;
+      if (amount > proyectedAmount) {
+        return account;
+      }
+    }
+  } else {
+    if (amount > account.amount) {
+      return account;
+    }
+  }
+
   if (!isSameDay(account.withdrawn_day, today)) {
     account.withdrawn_today = 0;
     account.withdrawn_day = today;
@@ -24,12 +48,10 @@ export const withdrawal = async (accountID: string, amount: number) => {
 
   const projectedTotal = account.withdrawn_today + amount;
 
-  // Validar límite diario
   if (projectedTotal > DAILY_WITHDRAW_LIMIT) {
     return account;
   }
 
-  // Actualizar montos en memoria
   account.withdrawn_today = projectedTotal;
   account.amount -= amount;
 
@@ -48,12 +70,27 @@ export const withdrawal = async (accountID: string, amount: number) => {
     throw new Error("Transaction failed");
   }
 
-  console.log(account);
   return account;
 };
 
 export const deposit = async (accountID: string, amount: number) => {
   const account = await getAccount(accountID);
+
+  if (amount <= 0) {
+    return account;
+  }
+
+  if (amount > 1000) {
+    return account;
+  }
+
+  if (account.type === "credit") {
+    let proyectedAmount = account.amount + amount;
+    if (proyectedAmount > 0) {
+      return account;
+    }
+  }
+
   account.amount += amount;
   const res = await query(
     `

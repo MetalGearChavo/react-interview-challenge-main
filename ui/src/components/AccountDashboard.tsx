@@ -19,6 +19,9 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
     checkingWithdrawLimit: false,
     creditWithdrawLimit: false,
     dailyWithdrawAmount: false,
+    negativeDeposit: false,
+    depositLimit: false,
+    creditDepositLimit: false,
   });
 
   const { signOut } = props;
@@ -29,7 +32,10 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
     | "negativeWithdrawal"
     | "checkingWithdrawLimit"
     | "creditWithdrawLimit"
-    | "dailyWithdrawAmount";
+    | "dailyWithdrawAmount"
+    | "negativeDeposit"
+    | "depositLimit"
+    | "creditDepositLimit";
   const setErrors = (errors: Array<ErrorKey>) => {
     const newErrors: Record<ErrorKey, boolean> = {
       singleTransactionLimit: false,
@@ -38,6 +44,9 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
       checkingWithdrawLimit: false,
       creditWithdrawLimit: false,
       dailyWithdrawAmount: false,
+      negativeDeposit: false,
+      depositLimit: false,
+      creditDepositLimit: false,
     };
     errors.forEach((error) => {
       newErrors[error] = true;
@@ -45,7 +54,7 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
     setErrorState(newErrors);
   };
 
-  const handleOnChange = (
+  const handleOnChangeWithdrawal = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     if (e.target.name === "withdrawAmount") {
@@ -57,17 +66,57 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
         checkingWithdrawLimit: false,
         creditWithdrawLimit: false,
         dailyWithdrawAmount: false,
+        negativeDeposit: false,
+        depositLimit: false,
+        creditDepositLimit: false,
       }));
     }
     setWithdrawAmount(+e.target.value);
   };
 
+  const handleOnChangeDeposit = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    if (e.target.name === "depositAmount") {
+      setErrorState((prev) => ({
+        ...prev,
+        depositLimit: false,
+        creditDepositLimit: false,
+        negativeDeposit: false,
+      }));
+    }
+    setDepositAmount(+e.target.value);
+  };
+
   const depositFunds = async () => {
+    const errors: ErrorKey[] = [];
+
     const requestOptions = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: depositAmount }),
     };
+
+    if (depositAmount <= 0) {
+      errors.push("negativeDeposit");
+    }
+
+    if (depositAmount > 1000) {
+      errors.push("depositLimit");
+    }
+
+    if (account.type === "credit") {
+      let proyectedAmount = account.amount + depositAmount;
+      if (proyectedAmount > 0) {
+        errors.push("creditDepositLimit");
+      }
+    }
+
+    if (errors.length > 0) {
+      setErrors(errors);
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:3000/transactions/${account.accountNumber}/deposit`,
       requestOptions
@@ -110,18 +159,16 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
       errors.push("dailyWithdrawAmount");
     }
 
-    if (account.type === "checking") {
-      if (withdrawAmount > account.amount) {
-        errors.push("checkingWithdrawLimit");
-      }
-    }
-
     if (account.type === "credit") {
       if (account.amount < 0) {
         let rem = account.creditLimit + account.amount;
         if (withdrawAmount > rem) {
           errors.push("creditWithdrawLimit");
         }
+      }
+    } else {
+      if (withdrawAmount > account.amount) {
+        errors.push("checkingWithdrawLimit");
       }
     }
 
@@ -160,6 +207,7 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
             <CardContent>
               <h3>Deposit</h3>
               <TextField
+                name="depositAmount"
                 label="Deposit Amount"
                 variant="outlined"
                 type="number"
@@ -167,7 +215,21 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
                   display: "flex",
                   margin: "auto",
                 }}
-                onChange={(e) => setDepositAmount(+e.target.value)}
+                onChange={(e) => handleOnChangeDeposit(e)}
+                error={
+                  errorState.creditDepositLimit ||
+                  errorState.depositLimit ||
+                  errorState.negativeDeposit
+                }
+                helperText={
+                  errorState.creditDepositLimit
+                    ? "You cannot deposit more than the amount required to bring your balance to zero."
+                    : errorState.depositLimit
+                    ? "You can deposit a maximum of $1,000 per transaction."
+                    : errorState.negativeDeposit
+                    ? "Deposit amount must be greater than zero."
+                    : ""
+                }
               />
               <Button
                 variant="contained"
@@ -196,7 +258,7 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
                   display: "flex",
                   margin: "auto",
                 }}
-                onChange={(e) => handleOnChange(e)}
+                onChange={(e) => handleOnChangeWithdrawal(e)}
                 error={
                   errorState.singleTransactionLimit ||
                   errorState.moduloFiveBills ||
