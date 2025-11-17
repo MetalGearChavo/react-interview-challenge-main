@@ -88,14 +88,8 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
     setDepositAmount(+e.target.value);
   };
 
-  const depositFunds = async () => {
+  const validateDeposit = () => {
     const errors: ErrorKey[] = [];
-
-    const requestOptions = {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: depositAmount }),
-    };
 
     if (depositAmount <= 0) {
       errors.push("negativeDeposit");
@@ -112,10 +106,21 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
       }
     }
 
+    return errors;
+  };
+
+  const depositFunds = async () => {
+    const errors = validateDeposit();
+
     if (errors.length > 0) {
       setErrors(errors);
       return;
     }
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: depositAmount }),
+    };
 
     const response = await fetch(
       `http://localhost:3000/transactions/${account.accountNumber}/deposit`,
@@ -132,14 +137,8 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
     });
   };
 
-  const withdrawFunds = async () => {
+  const validateWithdraw = () => {
     const errors: ErrorKey[] = [];
-
-    const requestOptions = {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: withdrawAmount }),
-    };
 
     if (withdrawAmount <= 0) {
       errors.push("negativeWithdrawal");
@@ -172,10 +171,22 @@ export const AccountDashboard = (props: AccountDashboardProps) => {
       }
     }
 
+    return errors;
+  };
+
+  const withdrawFunds = async () => {
+    const errors = validateWithdraw();
+
     if (errors.length > 0) {
       setErrors(errors);
       return;
     }
+
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: withdrawAmount }),
+    };
 
     const response = await fetch(
       `http://localhost:3000/transactions/${account.accountNumber}/withdraw`,
